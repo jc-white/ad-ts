@@ -252,8 +252,10 @@ module.exports = {
 
   async userExists(userName) {
     return new Promise(async (resolve, reject) => {
-      const domain = this.config.domain;
-      let fullUser = `${userName}@${domain}`;
+      const domain = this.config.domain,
+        fullUser =
+          userName.indexOf('@') > -1 ? userName : `${userName}@${domain}`;
+
       this.ad.userExists(fullUser, (error, exists) => {
         if (error) {
           /* istanbul ignore next */

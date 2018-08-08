@@ -137,5 +137,24 @@ module.exports = {
         })
         .catch(reject);
     });
+  },
+
+  async getGroupMembers(groupName) {
+    return new Promise(async (resolve, reject) => {
+      this.findGroup(groupName)
+        .then(groupObject => {
+          if (Object.keys(groupObject).length < 1) {
+            return reject({
+              error: true,
+              message: `Group ${groupName} does not exist.`
+            });
+          }
+          return this._getGroupUsers(groupName);
+        })
+        .then(resp => {
+          return resolve(resp);
+        })
+        .catch(reject);
+    });
   }
 };
