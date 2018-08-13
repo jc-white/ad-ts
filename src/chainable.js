@@ -101,6 +101,9 @@ module.exports = {
       },
       remove: () => {
         return this.removeUser(userName);
+      },
+      getGroupMembership: opts => {
+        return this.getUserGroupMembership(userName, opts);
       }
     };
   },

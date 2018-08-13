@@ -439,5 +439,23 @@ module.exports = {
           });
       });
     });
+  },
+
+  async getUserGroupMembership(userName, opts) {
+    return new Promise(async (resolve, reject) => {
+      this.findUser(userName).then(userObject => {
+        if (Object.keys(userObject).length < 1) {
+          return reject({ error: true, message: 'User does not exist.' });
+        }
+        this._getUserGroups(userObject.dn, opts)
+          .then(resp => {
+            resolve(resp);
+          })
+          .catch(err => {
+            /* istanbul ignore next */
+            reject(Object.assign(err, { error: true }));
+          });
+      });
+    });
   }
 };

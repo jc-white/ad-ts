@@ -1,4 +1,4 @@
-const activedirectory = require('activedirectory');
+const activedirectory = require('activedirectory2');
 const configFile = require('./config.json');
 
 const imports = {
@@ -85,6 +85,7 @@ class AD {
       baseDN: config.baseDN,
       username: config.user,
       password: config.pass,
+      includeMembership: config.includeMembership || 'all',
       tlsOptions: {
         rejectUnauthorized: false
       }

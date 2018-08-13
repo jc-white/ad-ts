@@ -22,15 +22,18 @@ module.exports = {
     return new Promise(async (resolve, reject) => {
       groupName =
         groupName.indexOf('@') > -1 ? groupName.split('@')[0] : groupName;
+
       if (groupName.trim() === '') {
         /* istanbul ignore next */
         return reject(`${groupName} is not a valid Group name.`);
       }
+
       const filter = `(|(cn=${groupName}))`;
       const config = {
         filter,
         includeDeleted: false
       };
+
       try {
         this.ad.find(config, async (err, results) => {
           if (err) {
