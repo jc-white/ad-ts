@@ -66,3 +66,5 @@ typings/
 .idea
 .vscode
 
+/dist
+
