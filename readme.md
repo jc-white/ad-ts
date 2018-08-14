@@ -1,4 +1,4 @@
-# AD
+# ADMain
 
 > Making Active Directory jQuery-easy.
 
@@ -8,7 +8,7 @@
 [![Build Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://img.shields.io/badge/build-100%25-brightgreen.svg)
 
 
-AD is a Javascript implementation of common Active Directory tasks, built to be simple as possible.
+ADMain is a Javascript implementation of common Active Directory tasks, built to be simple as possible.
 
 Really simple.
 
@@ -66,14 +66,14 @@ npm i ad
 yarn add ad
 ```
 
-Then add this to `index.js`:
+Then add this to `index.ts`:
 
 ```js
-const AD = require('ad');
+const ADMain = require('ad');
 
-// Your AD account should be a member
+// Your ADMain account should be a member
 // of the Administrators group.
-const ad = new AD({
+const ad = new ADMain({
 	url: "ldaps://127.0.0.1",
 	user: "dthree@acme.co",
 	pass: "howinsecure"
@@ -90,7 +90,7 @@ ad.user().get().then(users => {
 Now run the file:
 
 ```bash
-node index.js
+node index.ts
 ```
 
 And you're off to the races.

@@ -1,4 +1,4 @@
-const AD = require('../index.js');
+const AD = require('../src/main.ts');
 const config = require('./importConfig');
 
 test('throws with no config', () => {
