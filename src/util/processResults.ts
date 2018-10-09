@@ -1,3 +1,4 @@
+import { FindResult } from "../../node_modules/@types/activedirectory2/interfaces";
 import { Dictionary, IProcessResultsConfig } from "../interfaces";
 import { isEmptyObj } from "../internal/helpers";
 
@@ -9,7 +10,9 @@ function prep(val: any) {
     return (!isNaN(val)) ? parseFloat(val) : String(val).toLowerCase();
 }
 
-export function processResults(config: IProcessResultsConfig | undefined, rows: Array<any> | Dictionary<any>) {
+function processResults<T>(config: IProcessResultsConfig | undefined, rows: FindResult): FindResult
+function processResults<T>(config: IProcessResultsConfig | undefined, rows: Array<any>): T[]
+function processResults<T>(config: IProcessResultsConfig | undefined, rows: any) {
     if (!config || isEmptyObj(config)) {
         return rows || null;
     }
@@ -20,7 +23,8 @@ export function processResults(config: IProcessResultsConfig | undefined, rows: 
                 rows[key] = module.exports.processResults(config, rows[key]);
             }
         }
-        return rows;
+
+        return rows as FindResult;
     }
 
     const {
@@ -43,19 +47,19 @@ export function processResults(config: IProcessResultsConfig | undefined, rows: 
 
             const value = prep(filter[key]);
             if (operator === "gte") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) >= value);
+                rows = rows.filter((row: any) => prep(row[string]) >= value);
             } else if (operator === "lte") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) <= value);
+                rows = rows.filter((row: any) => prep(row[string]) <= value);
             } else if (operator === "gt") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) > value);
+                rows = rows.filter((row: any) => prep(row[string]) > value);
             } else if (operator === "lt") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) < value);
+                rows = rows.filter((row: any) => prep(row[string]) < value);
             } else if (operator === "ne") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) !== value);
+                rows = rows.filter((row: any) => prep(row[string]) !== value);
             } else if (operator === "like") {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]).indexOf(value) > -1);
+                rows = rows.filter((row: any) => prep(row[string]).indexOf(value) > -1);
             } else {
-                rows = rows.filter((row: Dictionary<any>) => prep(row[string]) === value);
+                rows = rows.filter((row: any) => prep(row[string]) === value);
             }
         }
     }
@@ -65,6 +69,10 @@ export function processResults(config: IProcessResultsConfig | undefined, rows: 
         rows      = rows.filter((row: Dictionary<any>) => {
             let match = false;
             for (const item in row) {
+                if (typeof row[item] != "string" && typeof row[item] != "number") {
+                    continue;
+                }
+
                 if (String(row[item]).toLowerCase().indexOf(str) > -1) {
                     match = true;
                 }
@@ -115,5 +123,7 @@ export function processResults(config: IProcessResultsConfig | undefined, rows: 
           return Object.keys(n).length > 0;
       });
 
-    return rows;
+    return rows as Array<T>;
 }
+
+export = processResults;

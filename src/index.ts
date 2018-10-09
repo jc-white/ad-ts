@@ -1,4 +1,6 @@
-import { Opts } from "../node_modules/@types/activedirectory2/interfaces";
+import { OtherInstance } from "./internal/instances/other.instance";
+import { OUInstance } from "./internal/instances/ou.instance";
+import { UserInstance } from "./internal/instances/user.instance";
 
 /**
  *  Exposes library through simple,
@@ -51,156 +53,50 @@ import {
     IUpdateUserProps
 } from "./interfaces";
 
-export class AD {
+import { GroupInstance } from "./internal/instances/group.instance";
+
+class AD {
     _AD: ADMain;
 
     constructor(config: IADConfig) {
         this._AD = new ADMain(config);
     }
 
-    user(userName: string) {
-        if (userName === undefined) {
-            return {
-                get: (config: IProcessResultsConfig) => {
-                    return this._AD.userHandler.getAllUsers(config);
-                },
-                add: (props: IAddUserProps) => {
-                    return this._AD.userHandler.addUser(props);
-                }
-            };
-        }
-
-        return {
-            get:                  (config: IProcessResultsConfig) => {
-                return this._AD.userHandler.findUser(userName, config);
-            },
-            update:               (props: IUpdateUserProps) => {
-                return this._AD.userHandler.updateUser(userName, props);
-            },
-            exists:               () => {
-                return this._AD.userHandler.userExists(userName);
-            },
-            addToGroup:           (groupName: string) => {
-                return this._AD.groupHandler.addUserToGroup(userName, groupName);
-            },
-            removeFromGroup:      (groupName: string) => {
-                return this._AD.groupHandler.removeUserFromGroup(userName, groupName);
-            },
-            isMemberOf:           (groupName: string) => {
-                return this._AD.userHandler.userIsMemberOf(userName, groupName);
-            },
-            authenticate:         (pass: string) => {
-                return this._AD.userHandler.authenticateUser(userName, pass);
-            },
-            password:             (pass: string) => {
-                return this._AD.userHandler.setUserPassword(userName, pass);
-            },
-            passwordNeverExpires: () => {
-                return this._AD.userHandler.setUserPasswordNeverExpires(userName);
-            },
-            passwordExpires:      () => {
-                return this._AD.userHandler.enableUser(userName);
-            },
-            enable:               () => {
-                return this._AD.userHandler.enableUser(userName);
-            },
-            disable:              () => {
-                return this._AD.userHandler.disableUser(userName);
-            },
-            move:                 (location: string) => {
-                return this._AD.userHandler.moveUser(userName, location);
-            },
-            location:             () => {
-                return this._AD.userHandler.getUserLocation(userName);
-            },
-            unlock:               () => {
-                return this._AD.userHandler.unlockUser(userName);
-            },
-            remove:               () => {
-                return this._AD.userHandler.removeUser(userName);
-            },
-            getGroupMembership:   (opts: Opts) => {
-                return this._AD.userHandler.getUserGroupMembership(userName, opts);
-            }
-        };
+    user(this: AD, userName?: undefined): UserInstance
+    user(this: AD, userName?: string): UserInstance
+    user(this: AD, userName?: any): UserInstance {
+        return new UserInstance(this._AD, userName);
     }
 
-    group(groupName: string) {
-        if (groupName === undefined) {
-            return {
-                get: (config: IProcessResultsConfig) => {
-                    return this._AD.groupHandler.getAllGroups(config);
-                },
-                add: (props: IAddGroupProps) => {
-                    return this._AD.groupHandler.addGroup(props);
-                }
-            };
-        }
-
-        return {
-            get:        (config: IProcessResultsConfig) => {
-                return this._AD.groupHandler.findGroup(groupName, config);
-            },
-            exists:     () => {
-                return this._AD.groupHandler.groupExists(groupName);
-            },
-            members:    () => {
-                return this._AD.groupHandler.getGroupMembers(groupName);
-            },
-            addUser:    (userName: string) => {
-                return this._AD.groupHandler.addUserToGroup(userName, groupName);
-            },
-            removeUser: (userName: string) => {
-                return this._AD.groupHandler.removeUserFromGroup(userName, groupName);
-            },
-            remove:     () => {
-                return this._AD.groupHandler.removeGroup(groupName);
-            }
-        };
+    group(this: AD, groupName?: undefined): GroupInstance
+    group(this: AD, groupName?: string): GroupInstance
+    group(this: AD, groupName?: any): GroupInstance {
+        return new GroupInstance(this._AD, groupName);
     }
 
-    ou(ouName: string) {
-        if (ouName === undefined) {
-            return {
-                get: (config: IProcessResultsConfig) => {
-                    return this._AD.OUHandler.getAllOUs(config);
-                },
-                add: (props: IAddOUProps) => {
-                    return this._AD.OUHandler.addOU(props);
-                }
-            };
-        }
-
-        return {
-            get:    () => {
-                return this._AD.OUHandler.findOU(ouName);
-            },
-            exists: () => {
-                return this._AD.OUHandler.ouExists(ouName);
-            },
-            remove: () => {
-                return this._AD.OUHandler.removeOU(ouName);
-            }
-        };
+    ou(this: AD, ouName?: undefined): OUInstance
+    ou(this: AD, ouName?: string): OUInstance
+    ou(this: AD, ouName?: any): OUInstance {
+        return new OUInstance(this._AD, ouName);
     }
 
-    other() {
-        return {
-            get: (config: IProcessResultsConfig) => {
-                return this._AD.othersHandler.getAllOthers(config);
-            }
-        };
+    other(this: AD): OtherInstance {
+        return new OtherInstance(this._AD);
     }
 
-    all() {
-        return {
-            get: (config: IProcessResultsConfig) => {
-                return this._AD.othersHandler.getAll(config);
-            }
-        };
-    }
-
-    find(searchString: string, config: IProcessResultsConfig) {
+    find(searchString: string, config?: IProcessResultsConfig) {
         return this._AD._search(searchString, config);
     }
+
+    cache(enabled: boolean) {
+        this._AD.cache(enabled);
+        return this;
+    }
+
+    cacheTimeout(millis: number) {
+        this._AD.cacheTimeout(millis);
+        return this;
+    }
 }
+
+export = AD;

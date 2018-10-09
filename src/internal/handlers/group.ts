@@ -1,8 +1,7 @@
-import { FindResult, Opts } from "../node_modules/@types/activedirectory2/interfaces";
-import { IAddGroupProps, IProcessResultsConfig } from "./interfaces";
-import ADMain from "./main";
-import { parseLocation } from "./util/parseLocation";
-import * as api from "./util/api";
+import { FindResult, Opts } from "../../../node_modules/@types/activedirectory2/interfaces";
+import { IAddGroupProps, IGroupResult, IProcessResultsConfig } from "../../interfaces";
+import ADMain from "../../main";
+import processResults = require("../../util/processResults");
 
 /**
  *  Public group functions
@@ -22,11 +21,11 @@ export class ADGroupHandler {
         this._AD = ADInstance;
     }
 
-    getAllGroups(config: IProcessResultsConfig) {
-        return this._AD._findByType(config, ["group"]);
+    getAllGroups(config?: IProcessResultsConfig): Promise<IGroupResult[]> {
+        return this._AD._findByType(['group'], config);
     }
 
-    findGroup(groupName: string, config?: IProcessResultsConfig): Promise<object> {
+    findGroup(groupName: string, config?: IProcessResultsConfig): Promise<IGroupResult> {
         groupName = String(groupName || "");
 
         return new Promise((resolve, reject) => {
@@ -44,15 +43,18 @@ export class ADGroupHandler {
             };
 
             try {
-                this._AD.ad.find(opts, (err: Error, results: FindResult) => {
+                this._AD.ad.find(opts, (err: any, results: FindResult) => {
                     if (err) {
                         /* istanbul ignore next */
                         return reject(err);
                     }
+
                     if (!results || !results.groups || results.groups.length < 1) {
-                        return resolve({});
+                        return reject(new Error("Group not found: " + groupName));
                     }
-                    const groups = api.processResults(config, results.groups);
+
+                    const groups = processResults<IGroupResult>(config, results.groups);
+
                     return resolve(groups[0]);
                 });
             } catch (e) {
@@ -62,21 +64,30 @@ export class ADGroupHandler {
         });
     }
 
-    async groupExists(groupName: string) {
-        const groupObject: any = await this.findGroup(groupName);
-
-        return !(!groupObject || !groupObject.dn);
+    async groupExists(groupName: string): Promise<boolean> {
+        try {
+            const groupObject: any = await this.findGroup(groupName);
+            return !(!groupObject || !groupObject.dn);
+        } catch (e) {
+            return false;
+        }
     }
 
-    async addGroup(props: IAddGroupProps) {
-        let { groupName, location, description } = props,
-            loc                                  = (location && parseLocation(location)) || "";
-
-        return this._AD._addObject(`CN=${groupName}`, loc, {
-            cn:             groupName,
-            description:    description,
-            objectClass:    "group",
-            sAmAccountName: groupName
+    addGroup(props: IAddGroupProps): Promise<IGroupResult> {
+        return new Promise((resolve, reject) => {
+            this._AD._addObject(`CN=${props.name}`, props.location as string, {
+                  cn:             props.name,
+                  description:    props.description,
+                  objectClass:    "group",
+                  sAmAccountName: props.name
+              })
+              .then(resp => {
+                  resolve(resp as IGroupResult);
+              })
+              .catch(err => {
+                  /* istanbul ignore next */
+                  reject(Object.assign(err, { error: true }));
+              });
         });
     }
 
@@ -127,18 +138,29 @@ export class ADGroupHandler {
         });
     }
 
-    removeGroup(groupName: string) {
+    removeGroup(groupName: string, quiet: boolean = false): Promise<{ success: boolean, error?: Error }> {
         return new Promise(async (resolve, reject) => {
             const groupObject: any = await this.findGroup(groupName);
 
             if (Object.keys(groupObject).length < 1) {
+                if (quiet) {
+                    return resolve();
+                }
+
                 return reject({
-                    error:   true,
+                    success: false,
                     message: `Group ${groupName} does not exist.`
                 });
             }
 
-            return this._AD._deleteObjectByDN(groupObject.dn);
+            this._AD._deleteObjectByDN(groupObject.dn)
+              .then(resp => {
+                  resolve({ success: true });
+              })
+              .catch((err: Error) => {
+                  /* istanbul ignore next */
+                  reject({ success: false, error: err });
+              });
         });
     }
 
@@ -152,7 +174,15 @@ export class ADGroupHandler {
                     message: `Group ${groupName} does not exist.`
                 });
             }
-            return this._AD._getGroupUsers(groupName, {});
+
+            this._AD._getGroupUsers(groupName, {})
+              .then(resp => {
+                  resolve(resp);
+              })
+              .catch(err => {
+                  /* istanbul ignore next */
+                  reject(Object.assign(err, { error: true }));
+              });
         });
     }
 }

@@ -67,4 +67,4 @@ typings/
 .vscode
 
 /dist
-
+/test/config.vendor.json

@@ -7,9 +7,14 @@ export interface IADConfig {
     domain?: string;
     baseDN?: string;
     includeMembership?: MembershipType;
-    tlsOptions:        {
+    tlsOptions: {
         rejectUnauthorized: boolean
-    }
+    };
+    options?: IADOptions;
+}
+
+export interface IADOptions {
+    userObjectClass: string|Array<string>;
 }
 
 export type TCachedItemType = "users" | "ous" | "groups" | "all";
@@ -19,52 +24,52 @@ export interface IProcessResultsConfig {
     filter?: {
         [key: string]: any
     };
-    q?: boolean;
+    q?: string[];
     start?: number;
     end?: number;
     limit?: number;
     page?: number;
-    order?: Array<string>;
-    sort?: "asc"|"desc";
+    order?: "asc"|"desc"[];
+    sort?: string[];
 }
 
-export interface IAddUserProps extends Dictionary<string | boolean> {
-    firstName: string;
-    lastName: string;
-    commonName: string;
+export interface IAddUserProps extends Dictionary<string | boolean | undefined> {
+    firstName?: string;
+    lastName?: string;
+    commonName?: string;
     userName: string;
-    pass: string;
-    email: string;
-    title: string;
-    phone: string;
-    location: string;
-    passwordExpires: boolean;
-    enabled: boolean;
+    pass?: string;
+    email?: string;
+    title?: string;
+    phone?: string;
+    location?: string;
+    passwordExpires?: boolean;
+    enabled?: boolean;
 }
 
-export interface IUpdateUserProps extends Dictionary<string | boolean> {
-    firstName: string;
-    lastName: string;
-    commonName: string;
-    userName: string;
-    pass: string;
-    email: string;
-    title: string;
-    phone: string;
-    objectClass: string;
-    passwordExpires: boolean;
+export interface IUpdateUserProps extends Dictionary<string | boolean | undefined> {
+    firstName?: string;
+    lastName?: string;
+    commonName?: string;
+    userName?: string;
+    pass?: string;
+    email?: string;
+    title?: string;
+    phone?: string;
+    objectClass?: string;
+    passwordExpires?: boolean;
 }
 
-export interface IAddOUProps extends Dictionary<string> {
+export interface IAddOUProps extends Dictionary<string | undefined> {
     name: string;
-    location: string;
-    description: string;
+    location?: string;
+    description?: string;
 }
 
-export interface IAddGroupProps extends Dictionary<string> {
-    groupName: string;
-    location: string;
-    description: string;
+export interface IAddGroupProps extends Dictionary<string | undefined> {
+    name: string;
+    location?: string;
+    description?: string;
 }
 
 export interface Dictionary<T> {
@@ -73,4 +78,21 @@ export interface Dictionary<T> {
 
 export interface IAuthenticationError {
     lde_message: string;
+}
+
+export interface IGroupResult {
+    [key: string]: string;
+    cn: string;
+    description: string;
+}
+
+export interface IUserResult extends IAddUserProps, Dictionary<string | boolean | undefined> {
+    sAMAccountName: string;
+    cn: string;
+    description: string;
+}
+
+export interface IOUResult extends Dictionary<string> {
+    name: string;
+    description: string;
 }

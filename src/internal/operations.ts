@@ -1,5 +1,6 @@
 import { Client } from "ldapjs";
 import ADMain from "../main";
+import { UserNotExistError } from "./errors";
 
 const ldap = require("ldapjs");
 
@@ -40,7 +41,7 @@ export class Operations {
         });
     }
 
-    _operationByUser(userName: string, operation: any) {
+    _operationByUser(userName: string, operation: any): Promise<{ success: boolean }> {
         return new Promise(async (resolve, reject) => {
             const domain = this._AD.config.domain;
             userName     = `${userName}@${domain}`;
@@ -49,7 +50,7 @@ export class Operations {
               .then((userObject: any) => {
                   if (!userObject || !userObject.dn) {
                       /* istanbul ignore next */
-                      return reject({ message: `User ${userName} does not exist.` });
+                      return reject(new UserNotExistError(userName));
                   }
 
                   return this._operation(userObject.dn, operation);

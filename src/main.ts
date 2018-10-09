@@ -1,15 +1,17 @@
 import ActiveDirectory from "activedirectory2";
 import { Filter } from "ldapjs";
 import * as ldap from "ldapjs";
-import { ADGroupHandler } from "./group";
+import { ADGroupHandler } from "./internal/handlers/group";
 import { Dictionary, IADConfig, IProcessResultsConfig, TCachedItemType } from "./interfaces";
 import { isEmptyObj } from "./internal/helpers";
-import { ADOthersHandler } from "./others";
-import { ADOUHandler } from "./ou";
-import { ADUserHandler } from "./user";
-import * as api from "./util/api";
-import { MembershipType, Opts } from "activedirectory2/interfaces";
+import { ADOUHandler } from "./internal/handlers/ou";
+import { ADUserHandler } from "./internal/handlers/user";
+import { FindResult, MembershipType, Opts } from "activedirectory2/interfaces";
 import ADOperations from "./internal/operations";
+
+import defaults = require("lodash.defaults");
+import compact = require("lodash.compact");
+import processResults = require("./util/processResults");
 
 export default class ADMain {
     ad: ActiveDirectory;
@@ -36,7 +38,6 @@ export default class ADMain {
     groupHandler: ADGroupHandler;
     userHandler: ADUserHandler;
     OUHandler: ADOUHandler;
-    othersHandler: ADOthersHandler;
 
     operations: ADOperations;
 
@@ -53,19 +54,19 @@ export default class ADMain {
             );
         }
 
-        if (String(config.url).indexOf("://") === -1) {
+        if (config.url.indexOf("://") === -1) {
             throw new Error(
               "You must specify the protocol in the url, such as ldaps://127.0.0.1."
             );
         }
 
-        if (String(config.user).indexOf("@") === -1) {
+        if (config.user.indexOf("@") === -1) {
             throw new Error(
               "The user must include the fully qualified domain name, such as joe@acme.co."
             );
         }
 
-        config.domain = config.domain || String(config.user).split("@")[1];
+        config.domain = config.domain || config.user.split("@")[1];
 
         if (config.baseDN === undefined) {
             config.baseDN = config.domain
@@ -73,6 +74,10 @@ export default class ADMain {
               .map(n => `DC=${n}`)
               .join(",");
         }
+
+        config.options = defaults({
+            userObjectClass: ["organizationalPerson", "person", "top", "user"]
+        });
 
         this.config = config;
 
@@ -112,9 +117,9 @@ export default class ADMain {
             password:   this.config.pass,
             url:        this.config.url,
             baseDN:     this.config.baseDN || "",
-            tlsOptions: {
+            tlsOptions: defaults({
                 rejectUnauthorized: false
-            }
+            })
         };
 
         this.ad = new ActiveDirectory(adConfig);
@@ -122,7 +127,6 @@ export default class ADMain {
         this.userHandler   = new ADUserHandler(this);
         this.groupHandler  = new ADGroupHandler(this);
         this.OUHandler     = new ADOUHandler(this);
-        this.othersHandler = new ADOthersHandler(this);
 
         this.operations = new ADOperations(this);
     }
@@ -152,13 +156,15 @@ export default class ADMain {
         });
     }
 
-    _findByType(config: IProcessResultsConfig = {}, membership: MembershipType[]) {
+    _findByType(membership: MembershipType[], config?: undefined): Promise<FindResult>
+    _findByType(membership: MembershipType[], config?: IProcessResultsConfig, ): Promise<Array<any>>
+    _findByType(membership: MembershipType[], config?: any) {
         let cacheKey = JSON.stringify(membership);
         return new Promise((resolve, reject) => {
             let cached = this._cache.get("all", cacheKey);
 
             if (cached) {
-                return resolve(api.processResults(config, cached));
+                return resolve(processResults(config, cached));
             }
 
             const opts: Opts = {
@@ -180,32 +186,32 @@ export default class ADMain {
 
                 if (membership.indexOf("all") > -1) {
                     this._cache.set("all", cacheKey, results);
-                    return resolve(api.processResults(config, results));
+                    return resolve(processResults<any>(config, results));
+                } else {
+                    let compiled: Array<any> = [];
+
+                    if (membership.indexOf("user") > -1) {
+                        compiled = compiled.concat(results.users);
+                    }
+
+                    if (membership.indexOf("group") > -1) {
+                        compiled = compiled.concat(results.groups);
+                    }
+
+                    if (membership.indexOf("other") > -1) {
+                        compiled = compiled.concat(results.other);
+                    }
+
+                    this._cache.set("all", cacheKey, compiled);
+                    resolve(processResults(config, compiled));
                 }
-
-                let compiled: Array<any> = [];
-
-                if (membership.indexOf("user") > -1) {
-                    compiled = compiled.concat(results.users);
-                }
-
-                if (membership.indexOf("group") > -1) {
-                    compiled = compiled.concat(results.groups);
-                }
-
-                if (membership.indexOf("other") > -1) {
-                    compiled = compiled.concat(results.other);
-                }
-
-                this._cache.set("all", cacheKey, compiled);
-                resolve(api.processResults(config, compiled));
             });
         });
     }
 
-    _search(filter: string | Filter, config: IProcessResultsConfig): Promise<Dictionary<any>>
-    _search(filter: string | Filter, config: undefined): Promise<ArrayLike<any>>
-    _search(filter: string | Filter, config: any): Promise<any> {
+    _search(filter: string | Filter, config?: undefined): Promise<FindResult>
+    _search(filter: string | Filter, config?: IProcessResultsConfig): Promise<Dictionary<any>>
+    _search(filter: string | Filter, config?: any): Promise<any> {
         return new Promise((resolve, reject) => {
             const opts: Opts = {
                 filter:         filter,
@@ -214,7 +220,7 @@ export default class ADMain {
 
             try {
                 this.ad.find(opts, (err, results) => {
-                    let processed = {};
+                    let processed: Dictionary<any> = {};
 
                     if (err) {
                         /* istanbul ignore next */
@@ -233,7 +239,7 @@ export default class ADMain {
                             }
                         }
 
-                        processed = api.processResults(config, combined);
+                        processed = processResults(config, combined);
                         resolve(processed);
                     } else {
                         resolve(results);
@@ -264,7 +270,7 @@ export default class ADMain {
         });
     }
 
-    _getUserGroups(userName: string, opts: Opts): Promise<Array<any>> {
+    _getUserGroups(userName: string, opts: Opts = {}): Promise<Array<any>> {
         return new Promise((resolve, reject) => {
             this.ad.getGroupMembershipForUser(opts, userName, (err, groups) => {
                 if (err) {
@@ -277,10 +283,10 @@ export default class ADMain {
         });
     }
 
-    _addObject(name: string, location: string, object: Dictionary<any>) {
+    _addObject(name: string, location: string, object: Dictionary<any>): Promise<Dictionary<any>> {
         return new Promise(async (resolve, reject) => {
-            let baseDN = String(this.config.baseDN).replace(/dc=/g, "DC="),
-                fullDN = String(`${name},${location}${baseDN}`);
+            let baseDN = this.config.baseDN!.replace(/dc=/g, "DC="),
+                fullDN = compact([name, location, baseDN]).join(",");
 
             const [error, client] = await this._getBoundClient();
 
@@ -296,17 +302,18 @@ export default class ADMain {
             }
 
             client.add(fullDN, object, (err: Error) => {
-                if (error) {
+                if (err) {
                     /* istanbul ignore next */
-                    return reject(error);
+                    return reject(err);
                 }
                 delete object.userPassword;
-                resolve(object);
+
+                return resolve(object);
             });
         });
     }
 
-    _deleteObjectBySearch(searchString: string) {
+    _deleteObjectBySearch(searchString: string): Promise<{ success: boolean, error?: Error }> {
         // todo
         return new Promise((resolve, reject) => {
             this._search(searchString, { fields: ["dn"] })
@@ -333,7 +340,7 @@ export default class ADMain {
         });
     }
 
-    _deleteObjectByDN(dn: string) {
+    _deleteObjectByDN(dn: string): Promise<{ success: boolean, error?: Error }> {
         return new Promise(async (resolve, reject) => {
             const [error, client] = await this._getBoundClient();
 
@@ -343,11 +350,12 @@ export default class ADMain {
             }
 
             client.del(dn, (err) => {
-                if (error) {
+                if (err) {
                     /* istanbul ignore next */
-                    return reject(error);
+                    return reject(err);
                 }
-                resolve({ success: true });
+
+                return resolve({ success: true });
             });
         });
     }

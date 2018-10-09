@@ -1,40 +1,77 @@
-const AD = require('../src/main.ts');
+const AD = require('../dist');
 const config = require('./importConfig');
+
+const baseConfig = {
+  baseDN: config.baseDN
+};
 
 test('throws with no config', () => {
   expect(() => new AD()).toThrow('Configuration is required.');
 });
 
-const url = config.url;
-const user = config.user;
-const pass = config.pass;
-
 test('throws on missing url', () => {
-  expect(() => new AD({ user, pass })).toThrow(
+  let cfg = Object.assign({}, baseConfig, {
+    user: config.user,
+    pass: config.pass
+  });
+
+  expect(() => new AD(cfg)).toThrow(
     'The following configuration is required: {url, user, pass}.'
   );
 });
 
 test('throws on incomplete url', () => {
-  expect(() => new AD({ url: '127.0.0.1', user, pass })).toThrow(
+  let cfg = Object.assign({}, baseConfig, {
+    url: '127.0.0.1',
+    user: config.user,
+    pass: config.pass
+  });
+
+  expect(() => new AD(cfg)).toThrow(
     'You must specify the protocol in the url, such as ldaps://127.0.0.1.'
   );
 });
 
 test('throws on missing user', () => {
-  expect(() => new AD({ url, pass })).toThrow(
+  let cfg = Object.assign({}, baseConfig, {
+    url: config.url,
+    pass: config.pass
+  });
+
+  expect(() => new AD(cfg)).toThrow(
     'The following configuration is required: {url, user, pass}.'
   );
 });
 
 test('throws on incomplete user', () => {
-  expect(() => new AD({ url, user: 'mock', pass })).toThrow(
+  let cfg = Object.assign({}, baseConfig, {
+    url: config.url,
+    user: 'mock',
+    pass: config.pass
+  });
+
+  expect(() => new AD(cfg)).toThrow(
     'The user must include the fully qualified domain name, such as joe@acme.co.'
   );
 });
 
 test('throws on missing pass', () => {
-  expect(() => new AD({ url, user })).toThrow(
+  let cfg = Object.assign({}, baseConfig, {
+    url: config.url,
+    user: config.user
+  });
+
+  expect(() => new AD(cfg)).toThrow(
     'The following configuration is required: {url, user, pass}.'
   );
+});
+
+test("doesn't throw an error with correct config", () => {
+  let cfg = Object.assign({}, baseConfig, {
+    url: config.url,
+    user: config.user,
+    pass: config.pass
+  });
+
+  expect(() => new AD(cfg)).not.toThrow();
 });

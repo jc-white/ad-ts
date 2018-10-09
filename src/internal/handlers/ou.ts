@@ -1,8 +1,6 @@
-import ADMain from "./main";
-import { IAddOUProps, IProcessResultsConfig } from "./interfaces";
-
-const api           = require("./util/api");
-const parseLocation = require("./util/parseLocation");
+import ADMain from "../../main";
+import { IAddOUProps, IOUResult, IProcessResultsConfig } from "../../interfaces";
+import processResults = require("../../util/processResults");
 
 /**
  *  Public ou functions
@@ -20,36 +18,38 @@ export class ADOUHandler {
         this._AD = _AD;
     }
 
-    async getAllOUs(config: IProcessResultsConfig) {
-        return new Promise(async (resolve, reject) => {
+    getAllOUs(config?: IProcessResultsConfig): Promise<IOUResult[]> {
+        return new Promise((resolve, reject) => {
             const search = `OU=*`;
             this._AD._search(search, {})
               .then(results => {
-                  if (!results || !results.other) {
+                  if (!Array.isArray(results) || !results.length) {
                       /* istanbul ignore next */
                       return resolve([]);
                   }
-                  let match = results.other.filter((ou: any) => {
+                  let match = results.filter((ou: any) => {
                       return (
                         String(ou.dn).split(",")[0].toLowerCase().indexOf("ou=") > -1
                       );
                   });
-                  resolve(api.processResults(config, match));
+
+                  resolve(processResults<IOUResult>(config, match));
               })
               .catch(reject);
         });
     }
 
-    async findOU(ouName: string) {
-        return new Promise(async (resolve, reject) => {
+    findOU(ouName: string): Promise<IOUResult> {
+        return new Promise((resolve, reject) => {
             const search = `OU=${ouName}`;
             this._AD._search(search, {})
               .then(results => {
-                  if (!results || !results.other) {
+                  if (!Array.isArray(results) || !results.length) {
+                      /* istanbul ignore next */
                       return resolve(undefined);
                   }
 
-                  let match = results.other.filter((ou: any) => {
+                  let match = results.filter((ou: any) => {
                       return (
                         String(ou.dn).split(",")[0].toLowerCase() === search.toLowerCase()
                       );
@@ -61,15 +61,15 @@ export class ADOUHandler {
         });
     }
 
-    async ouExists(ouName: string) {
-        return new Promise(async (resolve, reject) => {
+    ouExists(ouName: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
             return this.findOU(ouName).then(ou => {
                 resolve(ou !== undefined);
             });
         });
     }
 
-    async addOU(props: string | IAddOUProps) {
+    addOU(props: string | IAddOUProps) {
         let _props: Partial<IAddOUProps> = {};
 
         if (typeof props === "string") {
@@ -81,7 +81,7 @@ export class ADOUHandler {
         }
 
         let { name, location, description } = _props,
-            loc                             = (location && parseLocation(location)) || "";
+            loc                             = location || "";
 
         return this._AD._addObject(`OU=${name}`, loc, {
             ou:          name,
@@ -90,7 +90,7 @@ export class ADOUHandler {
         });
     }
 
-    async removeOU(ouName: string) {
+    removeOU(ouName: string): Promise<{ success: boolean, error?: Error }> {
         return this._AD._deleteObjectBySearch(`OU=${ouName}`);
     }
 }

@@ -1,5 +1,7 @@
 {
-	"url": "ldaps://127.0.0.1",
-	"user": "mock@acme.co",
-	"pass": "fizzlewuzzy",
+	"url":    "ldaps://",
+	"user":   "anyuser",
+	"pass":   "somepass",
+	"domain": "some-ad-domain.com",
+	"baseDN": ""
 }

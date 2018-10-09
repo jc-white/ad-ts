@@ -1,11 +1,9 @@
-import { Opts } from "../node_modules/@types/activedirectory2/interfaces";
-import ADMain from "./main";
-import { Dictionary, IAddUserProps, IProcessResultsConfig, IUpdateUserProps } from "./interfaces";
-
-const ssha           = require("node-ssha256");
-const api            = require("./util/api");
-const encodePassword = require("./util/encodePassword");
-const parseLocation  = require("./util/parseLocation");
+import { Opts } from "../../../node_modules/@types/activedirectory2/interfaces";
+import { InvalidCredentialError, UserNotExistError } from "../errors";
+import ADMain from "../../main";
+import { Dictionary, IAddUserProps, IProcessResultsConfig, IUpdateUserProps, IUserResult } from "../../interfaces";
+import { encodePassword } from "../../util/encodePassword";
+import processResults = require("../../util/processResults");
 
 /**
  *  Public user functions
@@ -32,46 +30,31 @@ export class ADUserHandler {
         this._AD = ADInstance;
     }
 
-    getAllUsers(config: IProcessResultsConfig) {
-        return this._AD._findByType(config, ["user"]);
+    getAllUsers(config?: IProcessResultsConfig): Promise<IUserResult[]> {
+        return this._AD._findByType(['user'], config);
     }
 
-    async addUser(props: IAddUserProps) {
+    addUser(props: IAddUserProps) {
         return new Promise(async (resolve, reject) => {
-            let {
-                    firstName,
-                    lastName,
-                    commonName,
-                    userName,
-                    pass,
-                    email,
-                    title,
-                    phone,
-                    location
-                } = props;
+            if (props.commonName) {
+                let cnParts     = props.commonName.split(" ");
+                props.firstName = props.firstName ? props.firstName : cnParts[0];
 
-            let { passwordExpires, enabled } = props;
-
-            if (commonName) {
-                let cnParts = String(commonName).split(" ");
-                firstName   = firstName ? firstName : cnParts[0];
                 if (cnParts.length > 1) {
-                    lastName = lastName ? lastName : cnParts[cnParts.length - 1];
+                    props.lastName = props.lastName ? props.lastName : cnParts[cnParts.length - 1];
                 }
             } else {
-                if (firstName && lastName) {
-                    commonName = `${firstName} ${lastName}`;
+                if (props.firstName && props.lastName) {
+                    props.commonName = `${props.firstName} ${props.lastName}`;
                 }
             }
 
-            location = parseLocation(location);
-
             let valid =
-                  email && String(email).indexOf("@") === -1
+                  props.email && props.email.indexOf("@") === -1
                     ? "Invalid email address."
-                    : !commonName
+                    : !props.commonName
                     ? "A commonName is required."
-                    : !userName ? "A userName is required." : true;
+                    : !props.userName ? "A userName is required." : true;
 
             if (valid !== true) {
                 /* istanbul ignore next */
@@ -79,53 +62,51 @@ export class ADUserHandler {
             }
 
             const userObject = {
-                cn:                commonName,
-                givenName:         firstName,
-                sn:                lastName,
-                mail:              email,
-                uid:               userName,
-                title:             title,
-                telephone:         phone,
-                userPrincipalName: `${userName}@${this._AD.config.domain}`,
-                sAMAccountName:    userName,
-                objectClass:       "inetOrgPerson",
-                userPassword:      ssha.create(pass)
+                cn:                props.commonName,
+                givenName:         props.firstName,
+                sn:                props.lastName,
+                uid:               props.userName,
+                title:             props.title,
+                telephone:         props.phone,
+                userPrincipalName: `${props.userName}@${this._AD.config.domain}`,
+                sAMAccountName:    props.userName,
+                objectClass:       this._AD.config.options!.userObjectClass
             };
 
-            this._AD._addObject(`CN=${commonName}`, location, userObject)
+            this._AD._addObject(`CN=${props.commonName}`, props.location as string, userObject)
               .then(res => {
-                  delete this._AD._cachedItems.users[userName];
+                  delete this._AD._cachedItems.users[props.userName];
                   this._AD._cachedItems.all = {};
-                  return this.setUserPassword(userName, pass);
+                  return this.setUserPassword(props.userName, props.pass as string);
               })
               .then(data => {
                   let expirationMethod =
-                        passwordExpires === false
+                        props.passwordExpires === false
                           ? this.setUserPasswordNeverExpires
                           : this.enableUser;
 
-                  return expirationMethod.call(this, userName);
+                  return expirationMethod.call(this, props.userName);
               })
               .then(data => {
-                  let enableMethod = enabled === false ? this.disableUser : this.enableUser;
+                  let enableMethod = props.enabled === false ? this.disableUser : this.enableUser;
 
-                  return enableMethod.call(this, userName);
+                  return enableMethod.call(this, props.userName);
               })
               .then(data => {
-                  delete userObject.userPassword;
                   return resolve(userObject);
               })
               .catch(err => {
                   /* istanbul ignore next */
-                  const ENTRY_EXISTS = String(err.message).indexOf("ENTRY_EXISTS") > -1;
+                  const ENTRY_EXISTS = err.message.indexOf("ENTRY_EXISTS") > -1;
                   /* istanbul ignore next */
                   if (ENTRY_EXISTS) {
                       /* istanbul ignore next */
                       return reject({
-                          message:    `User ${userName} already exists.`,
+                          message:    `User ${props.userName} already exists.`,
                           httpStatus: 400
                       });
                   }
+
                   /* istanbul ignore next */
                   return reject({
                       message:    `Error creating user: ${err.message}`,
@@ -135,7 +116,7 @@ export class ADUserHandler {
         });
     }
 
-    async updateUser(userName: string, props: IUpdateUserProps) {
+    updateUser(userName: string, props: IUpdateUserProps) {
         return new Promise((resolve, reject) => {
             const domain = this._AD.config.domain;
 
@@ -156,8 +137,7 @@ export class ADUserHandler {
             for (const name in props) {
                 if (map[name] !== undefined) {
                     let key   = map[name];
-                    let value =
-                          name === "password" ? encodePassword(props[name]) : props[name];
+                    let value = name === "password" ? encodePassword(props[name] as string) : props[name];
                     if (key !== "cn") {
                         if (key === "sAMAccountName") {
                             later.push({
@@ -213,7 +193,7 @@ export class ADUserHandler {
                     : this.enableUser;
 
                   if (props.passwordExpires !== undefined) {
-                     await expirationMethod.call(this, userName);
+                      await expirationMethod.call(this, userName);
                   }
               })
               .then(async (data: any) => {
@@ -232,14 +212,14 @@ export class ADUserHandler {
         });
     }
 
-    findUser(userName: string, config?: IProcessResultsConfig) {
-        userName = String(userName || "");
+    findUser(userName: string, config?: IProcessResultsConfig): Promise<IUserResult> {
+        userName = userName || "";
 
         return new Promise((resolve, reject) => {
             let cached = this._AD._cache.get("users", userName);
 
             if (cached) {
-                return resolve(api.processResults(config, [cached])[0]);
+                return resolve(processResults<IUserResult>(config, [cached])[0]);
             }
 
             const domain = this._AD.config.domain;
@@ -261,13 +241,14 @@ export class ADUserHandler {
 
                 if (!results || !results.users || results.users.length < 1) {
                     this._AD._cache.set("users", userName, {});
-                    return resolve({});
+                    return reject(new UserNotExistError(userName));
                 }
 
                 this._AD._cache.set("users", userName, results.users[0]);
-                results.users = api.processResults(config, results.users);
 
-                return resolve(results.users[0]);
+                const users = processResults<IUserResult>(config, results.users);
+
+                return resolve(users[0]);
             });
         });
     }
@@ -309,32 +290,24 @@ export class ADUserHandler {
         });
     }
 
-    authenticateUser(userName: string, pass: string) {
+    authenticateUser(userName: string, pass: string): Promise<boolean> {
         const domain = this._AD.config.domain;
         let fullUser = `${userName}@${domain}`;
 
         return new Promise(async (resolve, reject) => {
-            this._AD.ad.authenticate(fullUser, pass, (error: any, authorized) => {
-                if (error && error.lde_message) {
-                    return resolve({
-                        detail:  error.lde_message,
-                        message: String(error.stack).split(":")[0]
-                    });
-                }
-
+            this._AD.ad.authenticate(fullUser, pass, (error: any, authenticated) => {
                 if (error) {
-                    /* istanbul ignore next */
-                    return reject(error);
+                    return reject(new InvalidCredentialError(fullUser, error.message, error.lde_message));
                 }
 
-                return resolve(authorized);
+                return resolve(authenticated);
             });
         });
     }
 
     setUserPassword(userName: string, pass: string) {
         return new Promise((resolve, reject) => {
-            if (!pass) {
+            if (!pass || pass === "") {
                 return reject({ message: "No password provided." });
             }
 
@@ -350,8 +323,8 @@ export class ADUserHandler {
         return new Promise((resolve, reject) => {
             this.findUser(userName)
               .then((userObject: any) => {
-                  let oldDN = userObject.dn;
-                  let parts = String(oldDN).split(",");
+                  let oldDN = userObject.dn as string;
+                  let parts = oldDN.split(",");
                   parts.shift();
                   parts.unshift(`CN=${cn}`);
 
@@ -393,19 +366,19 @@ export class ADUserHandler {
         });
     }
 
-    moveUser(userName: string, location: string) {
+    moveUser(userName: string, location: string): Promise<{ success: boolean, error?: Error }> {
         return new Promise(async (resolve, reject) => {
-            location = parseLocation(location);
+            //location = parseLocation(location);
             this.findUser(userName)
               .then((userObject: any) => {
                   let oldDN  = userObject.dn;
-                  let baseDN = String(this._AD.config.baseDN).replace(/dc=/g, "DC=");
-                  let newDN  = `CN=${userObject.cn},${location}${baseDN}`;
+                  let baseDN = this._AD.config.baseDN!.replace(/dc=/g, "DC=");
+                  let newDN  = [`CN=${userObject.cn}`, location, baseDN].filter(s => !!s && s != "").join(",");
                   return this._AD._modifyDN(oldDN, newDN);
               })
               .then(result => {
                   delete this._AD._cachedItems.users[userName];
-                  resolve(result);
+                  resolve({ success: true });
               })
               .catch(err => {
                   /* istanbul ignore next */
@@ -414,16 +387,16 @@ export class ADUserHandler {
         });
     }
 
-    getUserLocation(userName: string) {
+    getUserLocation(userName: string): Promise<string> {
         return new Promise(async (resolve, reject) => {
             this.findUser(userName)
               .then((userObject: any) => {
                   if (Object.keys(userObject).length < 1) {
                       /* istanbul ignore next */
-                      return reject({ error: true, message: "User does not exist." });
+                      return reject(new UserNotExistError(userName));
                   }
                   let dn       = userObject.dn;
-                  let left     = String(dn)
+/*                  let left     = String(dn)
                     .replace(/DC=/g, "dc=")
                     .replace(/CN=/g, "cn=")
                     .replace(/OU=/g, "ou=")
@@ -434,8 +407,8 @@ export class ADUserHandler {
                     .reverse()
                     .join("/")
                     .replace(/cn=/g, "!")
-                    .replace(/ou=/g, "");
-                  return resolve(location);
+                    .replace(/ou=/g, "");*/
+                  return resolve(dn);
               })
               .catch(err => {
                   /* istanbul ignore next */
@@ -455,7 +428,7 @@ export class ADUserHandler {
             this.findUser(userName)
               .then((userObject: any) => {
                   if (Object.keys(userObject).length < 1) {
-                      return reject({ error: true, message: "User does not exist." });
+                      return reject(new UserNotExistError(userName));
                   }
                   this._AD._deleteObjectByDN(userObject.dn)
                     .then(resp => {
@@ -469,15 +442,15 @@ export class ADUserHandler {
         });
     }
 
-    getUserGroupMembership(userName: string, opts: Opts) {
+    getUserGroupMembership(userName: string) {
         return new Promise(async (resolve, reject) => {
             this.findUser(userName)
               .then((userObject: any) => {
                   if (Object.keys(userObject).length < 1) {
-                      return reject({ error: true, message: "User does not exist." });
+                      return reject(new UserNotExistError(userName));
                   }
 
-                  this._AD._getUserGroups(userObject.dn, opts)
+                  this._AD._getUserGroups(userObject.dn)
                     .then(resp => {
                         resolve(resp);
                     })

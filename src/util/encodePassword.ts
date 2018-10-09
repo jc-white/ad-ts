@@ -1,4 +1,4 @@
-export function encodePassword(password: string) {
+/*export function encodePassword(password: string) {
 	let newPassword = '';
 	password = "\"" + password + "\"";
 
@@ -7,4 +7,8 @@ export function encodePassword(password: string) {
 	}
 
 	return newPassword;
+}*/
+
+export function encodePassword(password: string) {
+    return new Buffer('"' + password + '"', 'utf16le').toString();
 }
