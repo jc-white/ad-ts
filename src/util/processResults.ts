@@ -10,9 +10,9 @@ function prep(val: any) {
     return (!isNaN(val)) ? parseFloat(val) : String(val).toLowerCase();
 }
 
-function processResults<T>(config: IProcessResultsConfig | undefined, rows: FindResult): FindResult
-function processResults<T>(config: IProcessResultsConfig | undefined, rows: Array<any>): T[]
-function processResults<T>(config: IProcessResultsConfig | undefined, rows: any) {
+export default function processResults<T>(config: IProcessResultsConfig | undefined, rows: FindResult): FindResult
+export default function processResults<T>(config: IProcessResultsConfig | undefined, rows: Array<any>): T[]
+export default function processResults<T>(config: IProcessResultsConfig | undefined, rows: any) {
     if (!config || isEmptyObj(config)) {
         return rows || null;
     }
@@ -125,5 +125,3 @@ function processResults<T>(config: IProcessResultsConfig | undefined, rows: any)
 
     return rows as Array<T>;
 }
-
-export = processResults;

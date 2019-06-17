@@ -8,10 +8,10 @@ import { ADOUHandler } from "./internal/handlers/ou";
 import { ADUserHandler } from "./internal/handlers/user";
 import { FindResult, MembershipType, Opts } from "activedirectory2/interfaces";
 import ADOperations from "./internal/operations";
+import processResults from "./util/processResults";
 
 import defaults = require("lodash.defaults");
 import compact = require("lodash.compact");
-import processResults = require("./util/processResults");
 
 export default class ADMain {
     ad: ActiveDirectory;

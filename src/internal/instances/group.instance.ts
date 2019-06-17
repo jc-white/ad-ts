@@ -37,13 +37,13 @@ export class GroupInstance {
         return this._AD.groupHandler.findGroup(this.groupName, config);
     }
 
-    exists() {
+    exists(): Promise<boolean> {
         if (this.groupName === '') throw new GroupNameUnspecifiedError('group().exists()');
 
         return this._AD.groupHandler.groupExists(this.groupName);
     }
 
-    members() {
+    members(): Promise<Array<any>> {
         if (this.groupName === '') throw new GroupNameUnspecifiedError('group().members()');
 
         return this._AD.groupHandler.getGroupMembers(this.groupName);

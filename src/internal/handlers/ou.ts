@@ -1,6 +1,6 @@
 import ADMain from "../../main";
 import { IAddOUProps, IOUResult, IProcessResultsConfig } from "../../interfaces";
-import processResults = require("../../util/processResults");
+import processResults from "../../util/processResults";
 
 /**
  *  Public ou functions

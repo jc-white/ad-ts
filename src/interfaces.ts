@@ -7,14 +7,14 @@ export interface IADConfig {
     domain?: string;
     baseDN?: string;
     includeMembership?: MembershipType;
-    tlsOptions: {
-        rejectUnauthorized: boolean
+    tlsOptions?: {
+        rejectUnauthorized?: boolean
     };
     options?: IADOptions;
 }
 
 export interface IADOptions {
-    userObjectClass: string|Array<string>;
+    userObjectClass?: string|Array<string>;
 }
 
 export type TCachedItemType = "users" | "ous" | "groups" | "all";

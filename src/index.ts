@@ -55,7 +55,7 @@ import {
 
 import { GroupInstance } from "./internal/instances/group.instance";
 
-class AD {
+export default class AD {
     _AD: ADMain;
 
     constructor(config: IADConfig) {
@@ -98,5 +98,3 @@ class AD {
         return this;
     }
 }
-
-export = AD;

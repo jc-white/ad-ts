@@ -1,9 +1,9 @@
 import { Opts } from "../../../node_modules/@types/activedirectory2/interfaces";
+import processResults from "../../util/processResults";
 import { InvalidCredentialError, UserNotExistError } from "../errors";
 import ADMain from "../../main";
 import { Dictionary, IAddUserProps, IProcessResultsConfig, IUpdateUserProps, IUserResult } from "../../interfaces";
 import { encodePassword } from "../../util/encodePassword";
-import processResults = require("../../util/processResults");
 
 /**
  *  Public user functions
