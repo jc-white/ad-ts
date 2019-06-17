@@ -1,6 +1,6 @@
 # ADMain
 
-> This project is a fork of [ad](https://www.npmjs.com/package/ad). Making Active Directory jQuery-easy.
+> This project is a fork of [ad](https://www.npmjs.com/package/ad), converted to TypeScript. Making Active Directory jQuery-easy.
 
 ---
 
