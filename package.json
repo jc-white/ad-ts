@@ -1,56 +1,56 @@
 {
-	"name": "ad",
-	"version": "0.3.0",
-	"description": "Active Directory API for Node",
-	"main": "index.js",
-	"scripts": {
-		"precommit": "lint-staged",
-		"build": "gulp clean && tsc",
-		"test": "gulp clean && tsc && jest test"
+	"name":            "ad-ts",
+	"version":         "1.0.1",
+	"description":     "Active Directory API for Node, written in Typescript",
+	"main":            "dist/index.js",
+	"types":           "dist/index.d.ts",
+	"files":           [
+		"dist"
+	],
+	"scripts":         {
+		"precommit":  "lint-staged",
+		"build":      "gulp clean && tsc",
+		"test":       "gulp clean && tsc && jest test",
+		"prepublish": "gulp clean && tsc"
 	},
-	"keywords": [
+	"keywords":        [
 		"active",
 		"directory",
 		"ldap",
 		"authentication",
 		"api",
 		"ad",
-		"addict",
 		"microsoft",
 		"windows",
-		"easy",
-		"chainable"
+		"easy"
 	],
-	"author": "dthree",
-	"license": "MIT",
-	"dependencies": {
+	"author":          "Jarin White <jarinwhite@gmail.com>",
+	"license":         "MIT",
+	"dependencies":    {
 		"activedirectory2": "^1.2.6",
-		"ldapjs": "^1.0.2",
-		"lodash.compact": "^3.0.1",
-		"lodash.defaults": "^4.2.0",
-		"lodash.orderby": "^4.6.0",
-		"node-ssha256": "^0.1.1"
+		"ldapjs":           "^1.0.2",
+		"lodash.compact":   "^3.0.1",
+		"lodash.defaults":  "^4.2.0",
+		"lodash.orderby":   "^4.6.0"
 	},
 	"devDependencies": {
-		"@types/activedirectory2": "^1.0.0",
-		"@types/ldapjs": "^1.0.3",
-		"@types/lodash.compact": "^3.0.4",
-		"@types/lodash.defaults": "^4.2.4",
-		"@types/lodash.orderby": "^4.6.4",
-		"gulp": "^3.9.1",
-		"gulp-clean": "^0.4.0",
-		"husky": "^0.14.3",
-		"jest": "^20.0.4",
-		"lint-staged": "^4.0.2",
-		"prettier": "^1.5.3",
-		"ts-jest": "^23.1.4",
-		"typescript": "^3.0.1"
+		"@types/activedirectory2": "^1.0.1",
+		"@types/ldapjs":           "^1.0.3",
+		"@types/lodash.compact":   "^3.0.4",
+		"@types/lodash.defaults":  "^4.2.4",
+		"@types/lodash.orderby":   "^4.6.4",
+		"gulp":                    "^3.9.1",
+		"gulp-clean":              "^0.4.0",
+		"jest":                    "^23.6.0",
+		"lint-staged":             "^4.0.2",
+		"ts-jest":                 "^23.1.4",
+		"typescript":              "^3.0.1"
 	},
-	"jest": {
-		"transform": {
+	"jest":            {
+		"transform":            {
 			"^.+\\.ts?$": "ts-jest"
 		},
-		"testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(js?|ts?)$",
+		"testRegex":            "(/__tests__/.*|(\\.|/)(test|spec))\\.(js?|ts?)$",
 		"moduleFileExtensions": [
 			"ts",
 			"js",
