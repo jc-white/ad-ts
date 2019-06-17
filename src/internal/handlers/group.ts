@@ -1,7 +1,7 @@
 import { FindResult, Opts } from "../../../node_modules/@types/activedirectory2/interfaces";
 import { IAddGroupProps, IGroupResult, IProcessResultsConfig } from "../../interfaces";
 import ADMain from "../../main";
-import processResults = require("../../util/processResults");
+import processResults from "../../util/processResults";
 
 /**
  *  Public group functions
@@ -164,7 +164,7 @@ export class ADGroupHandler {
         });
     }
 
-    getGroupMembers(groupName: string) {
+    getGroupMembers(groupName: string): Promise<Array<any>> {
         return new Promise(async (resolve, reject) => {
             const groupObject: any = await this.findGroup(groupName);
 
